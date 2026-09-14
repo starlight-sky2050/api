@@ -1,0 +1,28 @@
+# === Python & Virtual Environment ===
+# 快取資料夾與編譯檔
+__pycache__/
+*.py[cod]
+
+# 虛擬環境
+venv/
+
+# === FastAPI & Environment Variables ===
+# 環境變數設定檔（包含資料庫密碼）
+.env
+.env.local
+
+# FastAPI / Uvicorn 執行的 log 日誌檔
+*.log
+
+# === PostgreSQL & Database Backups ===
+# 資料庫 dump 檔與備份
+*.sql
+*.sqlite3
+
+# === IDE & OS Files ===
+# VS Code 個人設定
+.vscode/
+
+# 作業系統產生的檔案
+.DS_Store
+Thumbs.db

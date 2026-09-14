@@ -1,48 +1,28 @@
-# Python virtual environments
-.venv/
-venv/
-env/
-ENV/
-
-# Python cache and compiled files
+# === Python & Virtual Environment ===
+# 快取資料夾與編譯檔
 __pycache__/
 *.py[cod]
-*$py.class
 
-# Test, coverage, and type-checker caches
-.pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-.mypy_cache/
-.pyre/
-.ruff_cache/
+# 虛擬環境
+venv/
 
-# Build and packaging artifacts
-build/
-dist/
-*.egg-info/
-.eggs/
-
-# Environment and local configuration
+# === FastAPI & Environment Variables ===
+# 環境變數設定檔（包含資料庫密碼）
 .env
-.env.*
-!.env.example
+.env.local
 
-# FastAPI / Uvicorn local files
+# FastAPI / Uvicorn 執行的 log 日誌檔
 *.log
 
-# PostgreSQL local data and backups
-postgres-data/
-pgdata/
-*.sql.gz
-*.dump
+# === PostgreSQL & Database Backups ===
+# 資料庫 dump 檔與備份
+*.sql
+*.sqlite3
 
-# IDE and OS files
-.vscode/*
-!.vscode/settings.json
-!.vscode/launch.json
-!.vscode/tasks.json
-.idea/
+# === IDE & OS Files ===
+# VS Code 個人設定
+.vscode/
+
+# 作業系統產生的檔案
 .DS_Store
 Thumbs.db

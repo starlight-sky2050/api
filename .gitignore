@@ -4,7 +4,7 @@ __pycache__/
 *.py[cod]
 
 # 虛擬環境
-venv/
+.venv/
 
 # === FastAPI & Environment Variables ===
 # 環境變數設定檔（包含資料庫密碼）

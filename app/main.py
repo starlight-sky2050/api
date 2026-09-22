@@ -1,45 +1,54 @@
-"""FastAPI 應用程式的主要入口。
-
-這個檔案負責建立 FastAPI app、註冊各個 router，並放置仍屬於
-示範用途的簡單 endpoint。實際的 notes API 則放在 routers 模組中，
-讓不同功能可以分開維護。
-"""
-
-from fastapi import FastAPI
+import os
+from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import Response
 from pydantic import BaseModel
 
-from app.routers.notes import router as notes_router
+app = FastAPI()
 
-# 建立整個 API 應用程式。FastAPI 會使用這個物件註冊路由與產生文件。
-app = FastAPI(title="My Backend API")
-
-# 將 notes router 加入主應用程式。完整路徑會是 /note/{note_id}。
-app.include_router(notes_router)
-
+# ----------------------------------------------------
+# 1. 所有 API 路徑一律加上 /api/ 前綴
+# ----------------------------------------------------
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok", "message": "FastAPI is running"}
 
 class Item(BaseModel):
-    """POST /items 使用的請求與回應資料格式。"""
-
     name: str
-    price: float
+    price: int
+
+@app.post("/api/items")
+def create_item(item: Item):
+    return {"message": "Item created", "data": item}
 
 
-@app.get("/health")
-def health_check():
-    """提供簡單的服務健康檢查。"""
+# ----------------------------------------------------
+# 2. 安全限制：僅允許存取 .html 與 .css 檔案
+# ----------------------------------------------------
+class RestrictedStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope) -> Response:
+        # 取得副檔名
+        ext = os.path.splitext(path)[1].lower()
+        # 非 .html 或 .css 檔案直接拒絕 (403 Forbidden)
+        if ext not in [".html", ".css", ""]:  # "" 代表目錄首頁（index.html）
+            raise HTTPException(
+                status_code=403, 
+                detail="Access denied: Only .html and .css files are allowed."
+            )
+        return await super().get_response(path, scope)
 
-    return {"status": "ok"}
 
+# ----------------------------------------------------
+# 3. 定義 WebUI 目錄並掛載至根目錄 /
+# ----------------------------------------------------
+# 指向 app/webui-lab 資料夾
+APP_DIR = os.path.dirname(os.path.abspath(__file__))      # .../Dbs/app
+DBS_DIR = os.path.dirname(APP_DIR)                        # .../Dbs
+PARENT_DIR = os.path.dirname(DBS_DIR)
 
-@app.get("/version")
-def version():
-    """回傳目前 API 版本。"""
+public_directory = os.path.join(PARENT_DIR, "webui-lab")
 
-    return {"version": "0.1.0"}
-
-
-@app.post("/items", response_model=Item)
-def create_item(item: Item) -> Item:
-    """驗證並原樣回傳收到的 item，目前不會寫入資料庫。"""
-
-    return item
+if os.path.exists(public_directory):
+    app.mount("/", RestrictedStaticFiles(directory=public_directory, html=True), name="static")
+else:
+    print(f"Warning: Public directory '{public_directory}' not found.")

@@ -6,11 +6,18 @@ Schema 是 API 資料格式的規格，不是資料庫 model，也不直接執�
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class NoteCreate(BaseModel):
+    """Request body used to create or replace a note."""
+
+    title: str = Field(max_length=200)
+    content: str
 
 
 class NoteResponse(BaseModel):
-    """GET /note/{note_id} 回傳的資料格式。
+    """Note data returned by the API.
 
     欄位名稱對應 notes 資料表及 repository SELECT 的欄位。
     created_at 會以 Python datetime 表示，最後由 FastAPI 序列化成 JSON

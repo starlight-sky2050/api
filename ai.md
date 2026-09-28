@@ -37,3 +37,13 @@ A :
   3. 設定 CORS（跨域權限）、中間件（Middleware）與啟動事件。
   4. 掛載靜態檔案：`app.mount("/", ...)`。
 * **不該寫**：不要把幾十個 API 的具體商業邏輯全部塞在這裡，API 應該拆去 `routers/` 裡面寫。
+
+---
+
+Q : FastAPI 收到 POST 資料後，資料真的會寫進資料庫嗎？關掉網站再重開，資料還會在嗎？
+
+A :
+
+要看 POST API 的實作。這個專案的 `POST /api/note` 會呼叫 repository 執行 `INSERT`，並用 `connection.commit()` 提交交易；只要 PostgreSQL 的資料庫沒有被清空或重建，關閉瀏覽器或重新啟動 FastAPI 後，資料仍會保留，可以用 `GET /api/note` 再查詢。
+
+但 `POST /api/items` 目前只把收到的內容放進回應，沒有執行資料庫寫入，所以重開後不會保留。判斷資料是否真的保存，可以檢查 API 是否執行資料庫寫入並提交交易，而不只看它有沒有回傳成功訊息。

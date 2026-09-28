@@ -6,9 +6,12 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-# ----------------------------------------------------
-# 1. 所有 API 路徑一律加上 /api/ 前綴
-# ----------------------------------------------------
+from app.routers import notes  # 匯入路由模組
+app.include_router(notes.router) # 註冊 notes 路由
+
+
+# api路徑
+
 @app.get("/api/health")
 def health_check():
     return {"status": "ok", "message": "FastAPI is running"}
@@ -22,9 +25,8 @@ def create_item(item: Item):
     return {"message": "Item created", "data": item}
 
 
-# ----------------------------------------------------
-# 2. 安全限制：僅允許存取 .html 與 .css 檔案
-# ----------------------------------------------------
+# 安全限制：僅允許存取 .html 與 .css 檔案
+
 class RestrictedStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope) -> Response:
         # 取得副檔名
@@ -38,12 +40,13 @@ class RestrictedStaticFiles(StaticFiles):
         return await super().get_response(path, scope)
 
 
-# ----------------------------------------------------
+
 # 3. 定義 WebUI 目錄並掛載至根目錄 /
-# ----------------------------------------------------
+
 # 指向 app/webui-lab 資料夾
-APP_DIR = os.path.dirname(os.path.abspath(__file__))      # .../Dbs/app
-DBS_DIR = os.path.dirname(APP_DIR)                        # .../Dbs
+
+APP_DIR = os.path.dirname(os.path.abspath(__file__))      
+DBS_DIR = os.path.dirname(APP_DIR)                      
 PARENT_DIR = os.path.dirname(DBS_DIR)
 
 public_directory = os.path.join(PARENT_DIR, "webui-lab")

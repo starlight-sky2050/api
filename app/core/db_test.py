@@ -1,8 +1,4 @@
-"""手動 PostgreSQL 連線 smoke test。
-
-這不是 API endpoint；直接執行這個檔案時，會確認 .env 的 DATABASE_URL
-可以連線，並印出實際連到的資料庫名稱。
-"""
+#測試連線PostgreSQL
 
 import os
 

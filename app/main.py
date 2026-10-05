@@ -1,13 +1,26 @@
 import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import Response
 from pydantic import BaseModel
 
-app = FastAPI()
+from app.core.db import create_db_tables
 
-from app.routers import notes  # 匯入路由模組
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    create_db_tables()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
+
+from app.routers import asset, notes  # 匯入路由模組
 app.include_router(notes.router) # 註冊 notes 路由
+app.include_router(asset.router) # 註冊 assets 路由
 
 
 # api路徑

@@ -6,12 +6,57 @@ PostgreSQL connection，並在 request 結束時自動關閉它。
 
 import os
 from collections.abc import Generator
+from functools import lru_cache
 
 import psycopg
 from dotenv import load_dotenv
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 # 從專案根目錄的 .env 載入本機開發設定。
 load_dotenv()
+
+
+class Base(DeclarativeBase):
+    """SQLAlchemy ORM model base."""
+
+
+@lru_cache
+def _get_engine() -> Engine:
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is not configured")
+
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql+psycopg://", 1)
+    elif database_url.startswith("postgresql://"):
+        database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+    return create_engine(database_url)
+
+
+@lru_cache
+def _get_session_factory() -> sessionmaker[Session]:
+    return sessionmaker(bind=_get_engine(), autoflush=False, expire_on_commit=False)
+
+
+def create_db_tables() -> None:
+    """Create the registered ORM tables if they do not already exist."""
+
+    from app.models.asset import Asset
+
+    Base.metadata.create_all(bind=_get_engine(), tables=[Asset.__table__])
+
+
+def get_db_session() -> Generator[Session, None, None]:
+    """Provide a SQLAlchemy session for one API request."""
+
+    session = _get_session_factory()()
+    try:
+        yield session
+    finally:
+        session.close()
 
 
 def get_db_connection() -> Generator[psycopg.Connection, None, None]:

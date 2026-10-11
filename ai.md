@@ -47,3 +47,18 @@ A :
 要看 POST API 的實作。這個專案的 `POST /api/note` 會呼叫 repository 執行 `INSERT`，並用 `connection.commit()` 提交交易；只要 PostgreSQL 的資料庫沒有被清空或重建，關閉瀏覽器或重新啟動 FastAPI 後，資料仍會保留，可以用 `GET /api/note` 再查詢。
 
 但 `POST /api/items` 目前只把收到的內容放進回應，沒有執行資料庫寫入，所以重開後不會保留。判斷資料是否真的保存，可以檢查 API 是否執行資料庫寫入並提交交易，而不只看它有沒有回傳成功訊息。
+
+---
+
+Q : 這次新增 Team、User、Permission、Tag 實體時，完整需求與分層規範是什麼？
+
+A :
+
+新增實體時，依照 Asset 模組的 Repository Pattern，分成 SQLAlchemy Model、Pydantic Schema、Repository、FastAPI Router，並在 `app/main.py` 註冊模型和路由。`app/core/db.py` 的 `create_db_tables()` 也要將新模型的資料表加入建表清單。
+
+* **Team**：資料表 `teams`。欄位為 `tid`（Integer 主鍵、自動遞增）、`team_name`（String(100)、不可為空、唯一）、`description`（String(500)、可為空）、`invite_code`（String(50)、不可為空、唯一）、`created_at`（預設 `datetime.utcnow`）。Schema 包含 `TeamBase`、`TeamCreate`、`TeamUpdate`、`TeamResponse`；建立時可自行提供邀請碼，未提供時自動產生。Repository 提供 CRUD 與 `get_by_invite_code()`。
+* **User**：資料表 `users`，避免使用 PostgreSQL 保留字 `user`。欄位為 `uid`（Integer 主鍵、自動遞增）、`username`（String(100)、不可為空、唯一）、`email`（String(255)、不可為空、唯一）、`password`（String(255)、不可為空，儲存雜湊值）、`created_at`（預設 `datetime.utcnow`）。Schema 包含 `UserBase`、`UserCreate`、`UserUpdate`、`UserResponse`；回應不得包含 password，建立和更新時需將密碼雜湊後儲存。Repository 除 CRUD 外提供 `get_by_email()`、`get_by_username()`。
+* **Permission**：資料表 `permissions`。欄位為 `pid`（Integer 主鍵、自動遞增）、`pcode`（String(100)、不可為空、唯一）。Schema 包含 `PermissionBase`、`PermissionCreate`、`PermissionUpdate`、`PermissionResponse`。Repository 除 CRUD 外提供 `get_by_pcode()`。
+* **Tag**：資料表 `tags`。欄位為 `tgid`（Integer 主鍵、自動遞增）、`tag_name`（String(100)、不可為空、唯一）、`tag_type`（String(50)、可為空）。Schema 包含 `TagBase`、`TagCreate`、`TagUpdate`、`TagResponse`。Repository 除 CRUD 外提供 `get_by_name()`。
+
+四個 Router 分別使用 `/api/teams`、`/api/users`、`/api/permissions`、`/api/tags` 作為 prefix，透過 `Depends(get_db_session)` 注入 SQLAlchemy Session。每個 Router 都提供列表 GET、建立 POST、單筆 GET、PATCH 更新及 DELETE；POST 回傳 201 Created，DELETE 回傳 204 No Content，不存在的單筆資料回傳 404。各 Response Schema 均使用 `ConfigDict(from_attributes=True)`，並只暴露該實體允許回傳的欄位。

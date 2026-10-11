@@ -45,8 +45,21 @@ def create_db_tables() -> None:
     """Create the registered ORM tables if they do not already exist."""
 
     from app.models.asset import Asset
+    from app.models.permission import Permission
+    from app.models.tag import Tag
+    from app.models.team import Team
+    from app.models.user import User
 
-    Base.metadata.create_all(bind=_get_engine(), tables=[Asset.__table__])
+    Base.metadata.create_all(
+        bind=_get_engine(),
+        tables=[
+            Asset.__table__,
+            Team.__table__,
+            User.__table__,
+            Permission.__table__,
+            Tag.__table__,
+        ],
+    )
 
 
 def get_db_session() -> Generator[Session, None, None]:

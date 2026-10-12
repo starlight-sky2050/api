@@ -22,13 +22,14 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(lifespan=lifespan)
 
-from app.routers import asset, notes, team, user, permission, tag  # 匯入路由模組
+from app.routers import asset, notes, team, user, permission, tag, views  # 匯入路由模組
 app.include_router(notes.router) # 註冊 notes 路由
 app.include_router(asset.router) # 註冊 assets 路由
 app.include_router(team.router) # 註冊 teams 路由
 app.include_router(user.router) # 註冊 users 路由
 app.include_router(permission.router) # 註冊 permissions 路由
 app.include_router(tag.router) # 註冊 tags 路由
+app.include_router(views.router) # 註冊 database view 路由
 
 
 # api路徑

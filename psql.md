@@ -594,7 +594,6 @@ app.include_router(notes.router)
 
 做出了3D Asset的CRUD
 
-
 ## W05：關聯式設計：view {#DbView}
 
 ### 學習目標
@@ -878,5 +877,9 @@ GRANT SELECT ON vd_subclass TO dev_user; -- API最小授權原則
 
 ### 驗收標準
 
-- [ ]  REST API測試
-- [ ]  API最小授權原則
+- [X]  REST API測試
+- [X]  API最小授權原則
+
+### 心得
+
+分兩次分別把ER model畫的東西都做出來了，然後我同時使用了psycopg以及SQLAlchemy，不過psycopg的CRUD只做了一組練習，這個專案是使用SQLAlchemy的方式來做，然後除了把程式碼做出來，這次看懂了在models、repositories等等資料夾，分別要寫甚麼樣的東西在裡面，以及資料從API進來時的流向，是怎麼透過程式碼對資料庫進行操作。不過這次並沒有詳讀views.py的程式碼，並且在AI coding的過程中遇到了一個狀況，我只請AI幫我修改，並沒有了解錯誤原因。總的來說，下次的目標是讀懂view，並把網頁雛型弄出來。

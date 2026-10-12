@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db_session
 from app.repositories.team import TeamRepository
-from app.schemas.team import TeamCreate, TeamResponse, TeamUpdate
+from app.schemas.team import AddTeamMemberRequest, TeamCreate, TeamResponse, TeamUpdate
 
 router = APIRouter(prefix="/api/teams", tags=["teams"])
 
@@ -19,6 +19,23 @@ def create_team(
 @router.get("", response_model=list[TeamResponse])
 def get_teams(session: Session = Depends(get_db_session)) -> list[TeamResponse]:
     return TeamRepository(session).get_all()
+
+
+@router.post("/{tid}/members", status_code=status.HTTP_201_CREATED)
+def add_team_member(
+    tid: int,
+    member: AddTeamMemberRequest,
+    session: Session = Depends(get_db_session),
+) -> dict[str, str]:
+    try:
+        TeamRepository(session).add_member_via_function(tid, member.uid, member.is_owner)
+    except Exception as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    return {"message": "Team member added successfully"}
 
 
 @router.get("/{tid}", response_model=TeamResponse)

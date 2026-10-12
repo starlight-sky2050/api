@@ -18,6 +18,11 @@ class TeamUpdate(BaseModel):
     invite_code: str | None = Field(default=None, max_length=50)
 
 
+class AddTeamMemberRequest(BaseModel):
+    uid: int
+    is_owner: bool = False
+
+
 class TeamResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

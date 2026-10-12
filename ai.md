@@ -62,3 +62,27 @@ A :
 * **Tag**：資料表 `tags`。欄位為 `tgid`（Integer 主鍵、自動遞增）、`tag_name`（String(100)、不可為空、唯一）、`tag_type`（String(50)、可為空）。Schema 包含 `TagBase`、`TagCreate`、`TagUpdate`、`TagResponse`。Repository 除 CRUD 外提供 `get_by_name()`。
 
 四個 Router 分別使用 `/api/teams`、`/api/users`、`/api/permissions`、`/api/tags` 作為 prefix，透過 `Depends(get_db_session)` 注入 SQLAlchemy Session。每個 Router 都提供列表 GET、建立 POST、單筆 GET、PATCH 更新及 DELETE；POST 回傳 201 Created，DELETE 回傳 204 No Content，不存在的單筆資料回傳 404。各 Response Schema 均使用 `ConfigDict(from_attributes=True)`，並只暴露該實體允許回傳的欄位。
+
+---
+
+Q : 如何為資料庫 View `v_team_members` 與 `v_asset_details` 新增唯讀 API？
+
+A :
+
+新增 `app/schemas/views.py` 定義 `TeamMemberViewResponse` 和 `AssetDetailViewResponse`，依 View 欄位提供對應的回應型別。`app/repositories/views.py` 的 `ViewRepository` 使用 SQLAlchemy `text()` 和綁定參數查詢 View；`app/routers/views.py` 提供 `GET /api/views/teams/{tid}/members` 及 `GET /api/views/assets/{aid}`，並在 `app/main.py` 註冊 router。這些端點只執行讀取；找不到資產詳細資料時回傳 404。實際查詢需以資料庫已建立這兩個 View 為前提。
+
+---
+
+Q : 如何透過 PostgreSQL Stored Function `add_team_member` 新增團隊成員？
+
+A :
+
+在 `app/schemas/team.py` 定義 `AddTeamMemberRequest`，包含 `uid` 和預設為 `False` 的 `is_owner`。`TeamRepository.add_member_via_function()` 透過 SQLAlchemy 執行 `SELECT add_team_member(:tid, :uid, :is_owner)`，並在成功後提交交易。`app/routers/team.py` 新增 `POST /api/teams/{tid}/members`，成功時回傳 201；呼叫 Function 失敗時回傳 HTTP 400。
+
+---
+
+Q : 如何讓新增團隊成員端點回傳 Stored Function 的實際錯誤訊息，並確保失敗交易回滾？
+
+A :
+
+Repository 將 SQLAlchemy `text()` 查詢存入 `query` 變數後，以綁定參數呼叫 Function。Router 捕捉例外後呼叫注入的 `session.rollback()`，並將 `str(exc)` 設為 HTTP 400 的 `detail`，因此可在 Swagger UI 看到底層錯誤文字。這種做法可能暴露資料庫內部資訊，正式環境應限制錯誤細節的可見範圍。

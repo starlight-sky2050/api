@@ -16,7 +16,7 @@ class AssetRepository:
     def get_by_id(self, aid: int) -> Asset | None:
         return self.session.get(Asset, aid)
 
-    def create(self, asset_data: dict[str, Any]) -> Asset:
+    def create_asset(self, asset_data: dict[str, Any]) -> Asset:
         asset = Asset(**asset_data)
         self.session.add(asset)
         self.session.commit()
@@ -32,13 +32,4 @@ class AssetRepository:
             setattr(asset, field, value)
         self.session.commit()
         self.session.refresh(asset)
-        return asset
-
-    def delete(self, aid: int) -> Asset | None:
-        asset = self.get_by_id(aid)
-        if asset is None:
-            return None
-
-        self.session.delete(asset)
-        self.session.commit()
         return asset

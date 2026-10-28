@@ -22,6 +22,6 @@ class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     uid: int
-    username: str
-    email: str
+    username: str | None
+    email: str | None
     created_at: datetime

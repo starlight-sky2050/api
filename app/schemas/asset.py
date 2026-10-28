@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class AssetCreate(BaseModel):
     asset_name: str = Field(max_length=100)
+    owner_id: int
     description: str | None = Field(default=None, max_length=500)
     path: str = Field(max_length=255)
     poly_count: int = 0

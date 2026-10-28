@@ -8,6 +8,7 @@ import psycopg
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.core.db import get_db_connection
+from app.core.security import get_current_member
 from app.repositories.notes import (
     create_note,
     delete_note,
@@ -19,7 +20,11 @@ from app.repositories.notes import (
 from app.schemas.notes import NoteCreate, NoteResponse
 
 # prefix 會加在本模組所有路由前面。
-router = APIRouter(prefix="/api/note", tags=["notes"])
+router = APIRouter(
+    prefix="/api/note",
+    tags=["notes"],
+    dependencies=[Depends(get_current_member)],
+)
 
 
 @router.post("", response_model=NoteResponse, status_code=status.HTTP_201_CREATED)

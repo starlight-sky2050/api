@@ -1,7 +1,7 @@
 import secrets
 from typing import Any
 
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.team import Team
@@ -19,11 +19,6 @@ class TeamRepository:
 
     def get_by_invite_code(self, invite_code: str) -> Team | None:
         return self.session.scalar(select(Team).where(Team.invite_code == invite_code))
-
-    def add_member_via_function(self, tid: int, uid: int, is_owner: bool) -> None:
-        query = text("SELECT add_team_member(:tid, :uid, :is_owner)")
-        self.session.execute(query, {"tid": tid, "uid": uid, "is_owner": is_owner})
-        self.session.commit()
 
     def create(self, team_data: dict[str, Any]) -> Team:
         team_data = dict(team_data)

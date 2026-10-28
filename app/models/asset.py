@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, String, func, text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -11,6 +11,9 @@ class Asset(Base):
 
     aid: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     asset_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    owner_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.uid"), nullable=False
+    )
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     path: Mapped[str] = mapped_column(String(255), nullable=False)
     poly_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default=text("0"))

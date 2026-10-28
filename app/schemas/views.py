@@ -13,7 +13,7 @@ class TeamMemberViewResponse(BaseModel):
     joined_at: datetime
 
 
-class AssetDetailViewResponse(BaseModel):
+class UserAssetViewResponse(BaseModel):
     aid: int
     asset_name: str
     description: str | None
@@ -25,5 +25,20 @@ class AssetDetailViewResponse(BaseModel):
     created_at: datetime
     owner_id: int
     owner_name: str
-    team_id: int
+
+
+class TeamAssetViewResponse(BaseModel):
+    tid: int
     team_name: str
+    aid: int
+    asset_name: str
+    description: str | None
+    path: str
+    poly_count: int
+    vert_count: int
+    texture_resolution: str | None
+    is_pot: bool
+    asset_created_at: datetime
+    shared_at: datetime
+    owner_id: int
+    owner_name: str

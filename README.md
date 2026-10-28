@@ -157,6 +157,33 @@ psql -U dev_user -d fastapi_dev -f .\psql\createtables.sql
 
 The database connection, SQL repository, API router, and response schema are separated into their own modules under `app/`.
 
+## Google Sign-In
+
+The API supports Google OpenID Connect sign-in at `/api/auth/google/login`.
+Configure `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and the exact
+`GOOGLE_REDIRECT_URI` registered in Google Cloud Console. Set different random
+values of at least 32 characters for `JWT_SECRET_KEY` and `SESSION_SECRET_KEY`.
+Use `AUTH_COOKIE_SECURE=true` when serving over HTTPS; only local HTTP
+development should use `false`.
+
+The callback stores verified Google profiles in `public.member`, issues an
+HS256 JWT in an HttpOnly cookie, and redirects to `AUTH_SUCCESS_REDIRECT_URL`.
+`GET /api/auth/me` returns the current profile, and `POST /api/auth/logout`
+clears the authentication cookie.
+The `/api/note` endpoints require a valid JWT in that cookie or a Bearer
+authorization header.
+
+Authentication uses `public.users.id` as the JWT subject and links Google
+profiles through `public.member.user_id`. The `users.id` column mirrors the
+existing `users.uid` so existing foreign keys remain valid. For a database
+created with the earlier user/member schema, apply the migration before
+starting the updated API. The JWT issuer has been versioned so sessions issued
+with the previous `member.id` subject must sign in again:
+
+```powershell
+psql "$env:DATABASE_URL" -f .\psql\migrations\20261025_users_member_identity.sql
+```
+
 ## Development Notes
 
 - Keep local virtual environments and environment variables out of version control.

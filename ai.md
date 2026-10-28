@@ -86,3 +86,76 @@ Q : 如何讓新增團隊成員端點回傳 Stored Function 的實際錯誤訊�
 A :
 
 Repository 將 SQLAlchemy `text()` 查詢存入 `query` 變數後，以綁定參數呼叫 Function。Router 捕捉例外後呼叫注入的 `session.rollback()`，並將 `str(exc)` 設為 HTTP 400 的 `detail`，因此可在 Swagger UI 看到底層錯誤文字。這種做法可能暴露資料庫內部資訊，正式環境應限制錯誤細節的可見範圍。
+
+---
+
+Q : 如何新增 `team_assets` 團隊與 3D 資產的多對多關聯模組？之後的對話也要記錄在 `ai.md` 。
+
+A :
+
+依照專案的 Repository Pattern，新增 `TeamAsset` ORM 模型、Pydantic Schema、Repository 與 `/api/team-assets` Router。關聯表以 `tid`、`aid` 作為複合主鍵，分別透過 `ON DELETE CASCADE` 參照 `teams`、`assets`，並以資料庫目前時間作為 `shared_at` 預設值。Router 提供列出團隊資產關聯、分享資產與解除關聯端點；缺少團隊或資產時回傳 404，重複關聯回傳 409，成功新增回傳 201，成功解除回傳 204。新增模型也需加入 `create_db_tables()` 的建表清單，並在 `app/main.py` 註冊 Router。已使用 SQLite 驗證新增、查詢、刪除及錯誤情境，並確認 OpenAPI 路由與 Python 編譯正常。
+
+使用者希望後續與助理的對話也持續追加到本檔案；每次對話以本檔既有的 Q/A 形式，簡要記錄需求與處理結果，並避免記錄密碼、金鑰等機密。
+
+---
+
+Q : 如何讀取 `v_user_assets` 與 `v_team_assets`，以及移除不再使用的 `AssetDetailViewResponse`？
+
+A :
+
+在 `app/schemas/views.py` 新增 `UserAssetViewResponse` 與 `TeamAssetViewResponse`，欄位分別對應使用者資產 View 和團隊資產 View。`ViewRepository` 新增以綁定參數查詢兩張 View 的方法，`app/routers/views.py` 提供 `GET /api/views/users/{uid}/assets` 與 `GET /api/views/teams/{tid}/assets`，回傳對應的 response schema 列表。依照需求移除 `AssetDetailViewResponse`、舊的 `get_asset_details()` Repository 方法，以及 `GET /api/views/assets/{aid}` 路由。
+
+---
+
+Q : 如何補上團隊成員刪除端點、資產刪除權限檢查，並確認 View 列表查詢？
+
+A :
+
+在 `TeamRepository` 新增以綁定參數執行 `DELETE FROM user_teams WHERE tid = :tid AND uid = :uid` 的 `remove_member()`，並在 `app/routers/team.py` 新增 `DELETE /api/teams/{tid}/members/{uid}`；成功時回傳 204，沒有關聯時回傳 404。`app/routers/views.py` 已有使用者資產、團隊資產和團隊成員三個 GET View 查詢端點。檢視目前程式後，未找到登入身份驗證依賴或 Asset owner 欄位；原本的 `DELETE /api/assets/{aid}` 沒有權限檢查。使用者選擇暫緩資產刪除，因此已移除該路由及 Repository 刪除方法，避免未授權刪除；待身份驗證與權限模型確定後再重新實作。
+
+---
+
+Q : 如何在建立 3D 資產時接收並儲存上傳者的 `owner_id`？
+
+A :
+
+在 `AssetCreate` 新增必填 `owner_id: int`，並在 `Asset` ORM 模型新增對應欄位及 `users.uid` 外鍵。Repository 的建立方法命名為 `create_asset()`，以 Schema 驗證後的資料建立 ORM 物件並提交，因此 `owner_id` 會一併寫入 `assets` 表；資產 Router 改為呼叫此方法。
+
+---
+
+Q : 如何新增 `asset_tags` 3D 資產與標籤的多對多關聯模組？
+
+A :
+
+新增 `AssetTag` ORM 模型、`AssetTagCreate`/`AssetTagResponse` Schema、`AssetTagRepository` 與 `/api/asset-tags` Router。關聯表以 `aid`、`tgid` 作為複合主鍵，外鍵設定 `ON DELETE CASCADE`，`created_at` 使用資料庫目前時間。Repository 提供新增關聯、移除關聯與 JOIN `tags` 查詢標籤資訊；Router 提供 GET 列表、POST 新增和 DELETE 移除端點，並處理缺少資產/標籤及重複關聯。新模型已加入 `create_db_tables()` 清單，Router 已在 `app/main.py` 註冊。
+
+---
+
+Q : 如何新增 `user_team_permissions` 團隊成員權限關聯模組？
+
+A :
+
+新增 `UserTeamPermission` ORM 模型、Grant/Response Schema、Repository 與 `/api/team-permissions` Router。新表以 `uid`、`tid`、`pid` 作為複合主鍵，對 `user_teams(uid, tid)` 設定複合 CASCADE 外鍵，對 `permissions.pid` 設定 CASCADE 外鍵，並以資料庫目前時間產生 `created_at`。新增 `UserTeam` 的既有表 ORM 映射供 SQLAlchemy 解析複合外鍵，但不將該表加入自動建表清單；只註冊並建立 `user_team_permissions`。Repository 支援 grant、revoke 和 JOIN permissions 查詢 pcode；Router 提供成員權限 GET、POST 授權、DELETE 撤銷，並在成員或權限不存在、重複授權或無此關聯時回傳適當 HTTP 錯誤。
+
+---
+
+Q : 如何將新增與移除團隊成員的 API 從 Team 模組拆到獨立模組？
+
+A :
+
+新增 `app/routers/team_member.py`、`app/repositories/team_member.py` 與 `app/schemas/team_member.py`，將 `POST /api/teams/{tid}/members`、`DELETE /api/teams/{tid}/members/{uid}` 及其 Repository 操作與 request schema 移入新模組，並在 `app/main.py` 註冊 Router。原本 `app/routers/team.py` 與 `app/repositories/team.py` 保留團隊本身的 CRUD；API 路徑及既有 HTTP 回應行為維持不變。
+
+---
+
+Q : 如何完成 Google OIDC 登入與 JWT Cookie 驗證？
+
+A :
+
+使用 Authlib 的 Google OpenID Connect discovery 與 `openid email profile` scope，透過 `/api/auth/google/login` 和 `/api/auth/google/callback` 完成登入；callback 只接受有 `sub`、email 且 `email_verified` 為 true 的 Google 使用者，並以 `google_sub` upsert 到 `public.member`。`app/core/security.py` 以固定 HS256、issuer `wke-api`、必要的 `sub/iss/iat/exp` claims 建立及驗證 JWT，支援 HttpOnly Cookie 或 Bearer Header，並在每個請求查詢資料庫確認 member 仍存在。新增 `/api/auth/me` 與 `/api/auth/logout`，在 `main.py` 加入 SessionMiddleware 與 auth router；依專案登入規格，也以 `get_current_member` 保護 Notes Router，匿名請求在連資料庫前回傳 401。JWT/Session secrets 必須不同且至少 32 字元，正式 HTTPS 環境須啟用 Secure Cookie。`public.member` ORM 隨既有建表流程建立，並更新依賴與 `.env.example`。
+---
+
+Q : 如何將認證身份改為核心使用者 `users` 加 Google 第三方綁定 `member` 的雙表架構？
+
+A :
+
+Google callback 以 `google_sub` 查找或建立綁定，在單一 SQLAlchemy transaction 內建立/更新核心使用者和 `public.member`，Google 登入回傳 `users.id` 作為 JWT `sub`。`GET /api/auth/me` 驗證 JWT 簽章與期限後，以 `users.id` LEFT JOIN `member` 取得 `id/name/email/picture`；核心使用者不存在時回傳 401。為保留既有指向 `users.uid` 的外鍵，`users.id` 維持與 `uid` 同值，舊式 username/email/password 欄位改為可空；新增 `member.user_id` 唯一外鍵。舊資料庫需先執行 `psql/migrations/20261025_users_member_identity.sql`。JWT issuer 版本化，舊 member ID token 需要重新登入。驗證包括 Python 編譯、PostgreSQL ORM DDL 編譯、repository 新增/更新與 profile 查詢路徑、JWT 驗證和 `/api/auth/me` 缺少使用者時的 401；尚未連實際 PostgreSQL 執行 migration。
